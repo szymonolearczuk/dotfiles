@@ -20,6 +20,7 @@ alias gp='g push'
 alias gpf='gp --force'
 alias gpo='g pull origin'
 
+alias psql='/opt/homebrew/opt/postgresql@18/bin/psql'
 
 export PATH="$HOME/.local/bin:$PATH"
 
