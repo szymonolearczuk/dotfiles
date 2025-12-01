@@ -21,6 +21,13 @@ alias gpf='gp --force'
 alias gpo='g pull origin'
 
 alias psql='/opt/homebrew/opt/postgresql@18/bin/psql'
+alias postgres-start='brew services start postgresql@18'
+alias postgres-stop='brew services stop postgresql@18'
+
+# Up-to-date image name here: https://github.com/Tesseract-Energy/python_monorepo/blob/main/database/clickhouse/README.md#setup
+CLICKHOUSE_IMAGE='ghcr.io/tesseract-energy/python_monorepo/clickhouse-ci:25.6.2-fuse2'
+alias clickhouse-start='docker run -d -p 8123:8123 -p 9000:9000 $CLICKHOUSE_IMAGE'
+alias clickhouse-stop='docker ps --filter "ancestor=$CLICKHOUSE_IMAGE" -q | xargs -r docker stop'
 
 export PATH="$HOME/.local/bin:$PATH"
 
