@@ -1,0 +1,7 @@
+[user]
+	name = szymonolearczuk
+	email = szymon.olearczuk@fuseenergy.com
+[pager]
+	branch = false
+[push]
+	autoSetupRemote = true
