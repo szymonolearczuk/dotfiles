@@ -20,6 +20,9 @@ alias gp='g push'
 alias gpf='gp --force'
 alias gpo='g pull origin'
 
+alias t='tmux'
+alias ta='tmux a'
+
 alias psql='/opt/homebrew/opt/postgresql@18/bin/psql'
 alias postgres-start='brew services start postgresql@18'
 alias postgres-stop='brew services stop postgresql@18'
