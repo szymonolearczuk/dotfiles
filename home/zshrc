@@ -19,6 +19,7 @@ alias gcan='gca --no-edit'
 alias gp='g push'
 alias gpf='gp --force'
 alias gpo='g pull origin'
+alias gsh='g show head'
 
 gps() {
   git push origin --set-upstream "$(git branch --show-current)"
