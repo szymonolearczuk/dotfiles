@@ -27,6 +27,10 @@ gps() {
   git push origin --set-upstream "$(git branch --show-current)"
 }
 
+grh() {
+  gr head~${1:-1}
+}
+
 alias t='tmux'
 alias ta='tmux a'
 
