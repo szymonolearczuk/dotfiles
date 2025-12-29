@@ -19,6 +19,7 @@ alias gcan='gca --no-edit'
 alias gp='g push'
 alias gpf='gp --force'
 alias gpo='g pull origin'
+alias gpom='g pull origin main'
 alias gst='g stash'
 alias gstp='gst pop'
 
