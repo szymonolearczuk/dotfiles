@@ -19,13 +19,16 @@ alias gca='gc --amend'
 alias gcan='gca --no-edit'
 alias gp='g push'
 alias gpf='gp --force'
-alias gpo='g pull origin'
 alias gpom='g pull origin main'
 alias gst='g stash'
 alias gstp='gst pop'
 
 gps() {
   git push origin --set-upstream "$(git branch --show-current)"
+}
+
+gpo() {
+  git pull origin "$(git branch --show-current)"
 }
 
 grh() {
