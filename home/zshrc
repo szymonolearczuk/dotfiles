@@ -13,6 +13,7 @@ alias gr='g reset'
 alias gl='g log'
 alias ga='g add'
 alias gd='g diff'
+alias gds='gd --staged'
 alias gc='g commit'
 alias gcm='gc -m'
 alias gca='gc --amend'
@@ -42,13 +43,15 @@ gsh() {
 alias t='tmux'
 alias ta='tmux a'
 
-alias postgres-start='brew services start postgresql@18'
-alias postgres-stop='brew services stop postgresql@18'
+alias postgres-start='brew services start postgresql@16'
+alias postgres-stop='brew services stop postgresql@16'
 
 # Up-to-date image name here: https://github.com/Tesseract-Energy/python_monorepo/blob/main/database/clickhouse/README.md#setup
 CLICKHOUSE_IMAGE='ghcr.io/tesseract-energy/python_monorepo/clickhouse-ci:25.6.2-fuse2'
 alias clickhouse-start='docker run -d -p 8123:8123 -p 9000:9000 -p 8443:8443 $CLICKHOUSE_IMAGE'
 alias clickhouse-stop='docker ps --filter "ancestor=$CLICKHOUSE_IMAGE" -q | xargs -r docker stop'
+
+alias chatbot-router='AWS_PROFILE=AdministratorAccessTest AWS_REGION=eu-west-2 /Users/szymonolearczuk/code/python_monorepo/.venv/bin/python /Users/szymonolearczuk/code/python_monorepo/lib/core/core/server/routers/chatbot/router.py'
 
 export PATH="$HOME/.local/bin:/opt/homebrew/opt/postgresql@18/bin:/opt/homebrew/bin:$PATH"
 
