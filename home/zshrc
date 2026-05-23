@@ -80,8 +80,8 @@ gwar() {
 alias t='tmux'
 alias ta='tmux a'
 
-alias postgres-start='brew services start postgresql@16'
-alias postgres-stop='brew services stop postgresql@16'
+alias postgres-start='brew services start postgresql@17'
+alias postgres-stop='brew services stop postgresql@17'
 
 # Up-to-date image name here: https://github.com/Tesseract-Energy/python_monorepo/blob/main/database/clickhouse/README.md#setup
 CLICKHOUSE_IMAGE='ghcr.io/tesseract-energy/python_monorepo/clickhouse-ci:25.6.2-fuse2'
