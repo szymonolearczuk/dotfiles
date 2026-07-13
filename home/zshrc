@@ -56,7 +56,7 @@ gwa() {
   local wt_path="$HOME/code/python_monorepo-$safe_name"
 
   gw add -b "$name" "$wt_path" origin/main
-  cd "$wt_path"
+  cd "$wt_path/backend"
 
   cmd/sync
   cmd/install
@@ -76,7 +76,7 @@ gwar() {
   git fetch origin >/dev/null 2>&1
 
   gw add -b "$name" "$wt_path" "origin/$name"
-  cd "$wt_path"
+  cd "$wt_path/backend"
 
   cmd/sync
   cmd/install
