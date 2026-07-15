@@ -595,7 +595,7 @@ require('lazy').setup({
 
         rust_analyzer = {},
 
-        pylsp = {},
+        pyright = {},
 
         lua_ls = {
           -- cmd = {...},
@@ -620,6 +620,23 @@ require('lazy').setup({
       --
       --  You can press `g?` for help in this menu.
       require('mason').setup()
+
+      -- On the nvim 0.11 native LSP stack, mason-lspconfig auto-enables pyright using the
+      -- config bundled in nvim-lspconfig, so per-server overrides in the `servers` table above
+      -- are ignored. Merge the venv interpreter in here instead. The monorepo has a
+      -- pyproject.toml in every workspace member, but pyrightconfig.json only at the project
+      -- root, so root_dir resolves there; the uv venv (with the editable workspace installs)
+      -- sits at <root>/.venv and pyright needs pythonPath pointed at it to resolve imports.
+      vim.lsp.config('pyright', {
+        before_init = function(_, config)
+          local venv_python = (config.root_dir or '') .. '/.venv/bin/python'
+          if config.root_dir and vim.fn.executable(venv_python) == 1 then
+            config.settings = config.settings or {}
+            config.settings.python = config.settings.python or {}
+            config.settings.python.pythonPath = venv_python
+          end
+        end,
+      })
 
       -- You can add other tools here that you want Mason to install
       -- for you, so that they are available from within Neovim.
@@ -657,28 +674,41 @@ require('lazy').setup({
         desc = '[F]ormat buffer',
       },
     },
-    opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        return {
-          timeout_ms = 500,
-          lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
-        }
-      end,
-      formatters_by_ft = {
-        lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
-        --
-        -- You can use a sub-list to tell conform to run *until* a formatter
-        -- is found.
-        -- javascript = { { "prettierd", "prettier" } },
-      },
-    },
+    config = function()
+      -- ruff lives in the project venv, not on PATH, so resolve it per-file the same way
+      -- pyright's interpreter is. Fall back to a PATH ruff for files outside the monorepo.
+      local function venv_ruff(_, ctx)
+        local root = vim.fs.root(ctx.filename, '.venv')
+        local candidate = root ~= nil and (root .. '/.venv/bin/ruff') or nil
+        if candidate ~= nil and vim.fn.executable(candidate) == 1 then
+          return candidate
+        end
+        return 'ruff'
+      end
+
+      require('conform').setup {
+        notify_on_error = false,
+        format_on_save = function(bufnr)
+          -- Disable "format_on_save lsp_fallback" for languages that don't
+          -- have a well standardized coding style. You can add additional
+          -- languages here or re-enable it for the disabled ones.
+          local disable_filetypes = { c = true, cpp = true }
+          return {
+            timeout_ms = 1000,
+            lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
+          }
+        end,
+        -- Match cmd/format for Python: `ruff check --fix` (autofix incl. import sort) then `ruff format`.
+        formatters_by_ft = {
+          lua = { 'stylua' },
+          python = { 'ruff_fix', 'ruff_format' },
+        },
+        formatters = {
+          ruff_fix = { command = venv_ruff },
+          ruff_format = { command = venv_ruff },
+        },
+      }
+    end,
   },
 
   { -- Autocompletion
@@ -899,6 +929,20 @@ require('lazy').setup({
     config = function()
       vim.keymap.set('n', '<leader>rt', '<cmd>:lua require("neotest").run.run()<cr>', { desc = '[R]un [T]est' })
       vim.keymap.set('n', '<leader>rta', '<cmd>:lua require("neotest").run.run(vim.fn.expand("%"))<cr>', { desc = '[R]un [T]est for [A]ll' })
+
+      -- Python tests in this monorepo must run through cmd/pants_test (from the pants build
+      -- root at backend/) rather than raw pytest, so pants provides DB-slot isolation,
+      -- dependency hermeticity, and CI parity. Run the current file in a terminal split.
+      vim.keymap.set('n', '<leader>rp', function()
+        local file = vim.fn.expand '%:p'
+        local build_root = vim.fs.root(file, 'pants.toml')
+        if build_root == nil then
+          vim.notify('No pants.toml found above ' .. file, vim.log.levels.ERROR)
+          return
+        end
+        local relative_file = file:sub(#build_root + 2)
+        vim.cmd('split | terminal cd ' .. vim.fn.shellescape(build_root) .. ' && cmd/pants_test ' .. vim.fn.shellescape(relative_file))
+      end, { desc = '[R]un [P]ants test (current file)' })
 
       require('neotest').setup {
         adapters = {
