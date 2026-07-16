@@ -914,6 +914,13 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>dvc', '<cmd>:DiffviewClose<cr>', { desc = '[D]iff [V]iew [C]lose' })
       vim.keymap.set('n', '<leader>dvh', '<cmd>:DiffviewFileHistory<cr>', { desc = '[D]iff [V]iew File [H]istory' })
       vim.keymap.set('n', '<leader>dvhc', '<cmd>:DiffviewFileHistory %<cr>', { desc = '[D]iff [V]iew File [H]istory [C]urrent file' })
+      vim.keymap.set('n', '<leader>dvs', function()
+        vim.ui.input({ prompt = 'Commit sha: ' }, function(sha)
+          if sha ~= nil and sha ~= '' then
+            vim.cmd('DiffviewOpen ' .. sha .. '^!')
+          end
+        end)
+      end, { desc = '[D]iff [V]iew [S]ingle commit' })
     end,
   },
   {
