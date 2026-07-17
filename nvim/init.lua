@@ -90,6 +90,12 @@ P.S. You can delete this when you're done too. It's your config now! :)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+-- mason installs PyPI tools (basedpyright, ruff) by creating a venv and bootstrapping pip with
+-- ensurepip. The uv-managed standalone python that wins `python3` on PATH can't do that (its venvs
+-- fail to import the encodings module), so put Homebrew's venv-capable python3 first for anything
+-- nvim spawns.
+vim.env.PATH = '/opt/homebrew/bin:' .. vim.env.PATH
+
 -- Set to true if you have a Nerd Font installed
 vim.g.have_nerd_font = true
 
@@ -595,7 +601,9 @@ require('lazy').setup({
 
         rust_analyzer = {},
 
-        pyright = {},
+        basedpyright = {},
+
+        ruff = {},
 
         lua_ls = {
           -- cmd = {...},
@@ -621,13 +629,15 @@ require('lazy').setup({
       --  You can press `g?` for help in this menu.
       require('mason').setup()
 
-      -- On the nvim 0.11 native LSP stack, mason-lspconfig auto-enables pyright using the
-      -- config bundled in nvim-lspconfig, so per-server overrides in the `servers` table above
-      -- are ignored. Merge the venv interpreter in here instead. The monorepo has a
-      -- pyproject.toml in every workspace member, but pyrightconfig.json only at the project
-      -- root, so root_dir resolves there; the uv venv (with the editable workspace installs)
-      -- sits at <root>/.venv and pyright needs pythonPath pointed at it to resolve imports.
-      vim.lsp.config('pyright', {
+      -- On the nvim 0.11 native LSP stack, mason-lspconfig auto-enables servers using the config
+      -- bundled in nvim-lspconfig, so per-server overrides in the `servers` table above are ignored.
+      -- Merge the venv interpreter in here instead. The monorepo has a pyproject.toml in every
+      -- workspace member, but pyrightconfig.json only at the project root, so root_dir resolves
+      -- there; the uv venv (with the editable workspace installs) sits at <root>/.venv and
+      -- basedpyright needs pythonPath pointed at it to resolve imports.
+      -- basedpyright over pyright: it re-implements Pylance's add-import quick fix as a real code
+      -- action (on <leader>ca), gated on reportUndefinedVariable staying enabled (the default).
+      vim.lsp.config('basedpyright', {
         before_init = function(_, config)
           local venv_python = (config.root_dir or '') .. '/.venv/bin/python'
           if config.root_dir and vim.fn.executable(venv_python) == 1 then
@@ -635,6 +645,14 @@ require('lazy').setup({
             config.settings.python = config.settings.python or {}
             config.settings.python.pythonPath = venv_python
           end
+        end,
+      })
+
+      -- ruff adds the lint quick fixes (autofix, organise imports) basedpyright doesn't. Let
+      -- basedpyright own hover so the two servers don't both answer K.
+      vim.lsp.config('ruff', {
+        on_attach = function(client)
+          client.server_capabilities.hoverProvider = false
         end,
       })
 
