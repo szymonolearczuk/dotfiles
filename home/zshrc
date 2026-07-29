@@ -202,3 +202,9 @@ eval $(thefuck --alias)
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# launchd gives every session a 256 soft file-descriptor limit, so raising it by hand only lasts
+# until the next shell. The hard limit is unlimited, so no sudo is needed to raise the soft one.
+if [[ $(ulimit -n) != unlimited ]] && (( $(ulimit -n) < 65536 )); then
+  ulimit -n 65536
+fi
