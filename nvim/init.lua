@@ -952,22 +952,74 @@ require('lazy').setup({
     },
 
     config = function()
-      vim.keymap.set('n', '<leader>rt', '<cmd>:lua require("neotest").run.run()<cr>', { desc = '[R]un [T]est' })
-      vim.keymap.set('n', '<leader>rta', '<cmd>:lua require("neotest").run.run(vim.fn.expand("%"))<cr>', { desc = '[R]un [T]est for [A]ll' })
-
       -- Python tests in this monorepo must run through cmd/pants_test (from the pants build
       -- root at backend/) rather than raw pytest, so pants provides DB-slot isolation,
-      -- dependency hermeticity, and CI parity. Run the current file in a terminal split.
-      vim.keymap.set('n', '<leader>rp', function()
+      -- dependency hermeticity, and CI parity. neotest has no adapter for that, so Python
+      -- bypasses it and shells out to a terminal split instead.
+      -- Builds the pytest -k expression selecting the test under the cursor, or nil if the
+      -- cursor is not inside one.
+      local function nearest_test_filter()
+        -- get_node only sees a tree that something already parsed (normally the highlighter),
+        -- so parse up front rather than depending on highlighting being attached.
+        local parser = vim.treesitter.get_parser(0, nil, { error = false })
+        if parser == nil then
+          return nil
+        end
+        parser:parse(true)
+
+        local test_name = nil
+        local node = vim.treesitter.get_node()
+        while node ~= nil do
+          local name_node = node:field('name')[1]
+          local name = name_node ~= nil and vim.treesitter.get_node_text(name_node, 0) or nil
+          if name ~= nil then
+            if node:type() == 'function_definition' and test_name == nil and vim.startswith(name, 'test') then
+              test_name = name
+            elseif node:type() == 'class_definition' and test_name ~= nil then
+              -- One file often repeats a method name across several test classes, so an
+              -- unqualified -k would run all of them rather than just the nearest.
+              return name .. ' and ' .. test_name
+            end
+          end
+          node = node:parent()
+        end
+        return test_name
+      end
+
+      local function run_pants_test(only_nearest)
         local file = vim.fn.expand '%:p'
         local build_root = vim.fs.root(file, 'pants.toml')
         if build_root == nil then
           vim.notify('No pants.toml found above ' .. file, vim.log.levels.ERROR)
           return
         end
-        local relative_file = file:sub(#build_root + 2)
-        vim.cmd('split | terminal cd ' .. vim.fn.shellescape(build_root) .. ' && cmd/pants_test ' .. vim.fn.shellescape(relative_file))
-      end, { desc = '[R]un [P]ants test (current file)' })
+        local command = 'cmd/pants_test ' .. vim.fn.shellescape(file:sub(#build_root + 2))
+        if only_nearest then
+          local test_filter = nearest_test_filter()
+          if test_filter == nil then
+            vim.notify('No enclosing test function at the cursor', vim.log.levels.ERROR)
+            return
+          end
+          command = command .. ' -- -k ' .. vim.fn.shellescape(test_filter)
+        end
+        vim.cmd('split | terminal cd ' .. vim.fn.shellescape(build_root) .. ' && ' .. command)
+      end
+
+      vim.keymap.set('n', '<leader>rt', function()
+        if vim.bo.filetype == 'python' then
+          run_pants_test(true)
+        else
+          require('neotest').run.run()
+        end
+      end, { desc = '[R]un [T]est' })
+
+      vim.keymap.set('n', '<leader>rta', function()
+        if vim.bo.filetype == 'python' then
+          run_pants_test(false)
+        else
+          require('neotest').run.run(vim.fn.expand '%')
+        end
+      end, { desc = '[R]un [T]est for [A]ll' })
 
       require('neotest').setup {
         adapters = {
