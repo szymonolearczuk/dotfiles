@@ -336,7 +336,10 @@ require('lazy').setup({
   { -- Fuzzy Finder (files, lsp, etc)
     'nvim-telescope/telescope.nvim',
     event = 'VimEnter',
-    branch = '0.1.x',
+    -- Pinned to a release rather than `branch = '0.1.x'`: that branch stopped in May 2024 and its
+    -- LSP jump path still calls vim.lsp.util.jump_to_location, which nvim 0.11 warns about on every
+    -- single-result gd and 0.12 removes outright. v0.2.x replaced it with vim.lsp.util.show_document.
+    tag = 'v0.2.2',
     dependencies = {
       'nvim-lua/plenary.nvim',
       { -- If encountering errors, see telescope-fzf-native README for installation instructions
@@ -554,18 +557,36 @@ require('lazy').setup({
           --    See `:help CursorHold` for information about when this is executed
           --
           -- When you move your cursor, the highlights will be cleared (the second autocommand).
+          --
+          -- The autocmds live in a named group so LspDetach can tear them down: without that,
+          -- a server exiting (e.g. basedpyright OOM-ing on a big repo) leaves the CursorHold
+          -- autocmd behind and every cursor pause errors with
+          -- "textDocument/documentHighlight is not supported by any of the servers".
           local client = vim.lsp.get_client_by_id(event.data.client_id)
-          if client and client.server_capabilities.documentHighlightProvider then
+          if client and client:supports_method 'textDocument/documentHighlight' then
+            local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
               buffer = event.buf,
+              group = highlight_augroup,
               callback = vim.lsp.buf.document_highlight,
             })
 
             vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
               buffer = event.buf,
+              group = highlight_augroup,
               callback = vim.lsp.buf.clear_references,
             })
           end
+        end,
+      })
+
+      vim.api.nvim_create_autocmd('LspDetach', {
+        group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
+        callback = function(event)
+          -- buf_clear_references(bufnr) rather than vim.lsp.buf.clear_references(), which only ever
+          -- acts on the current buffer — a server can detach from a buffer you aren't looking at.
+          vim.lsp.util.buf_clear_references(event.buf)
+          vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = event.buf }
         end,
       })
 
@@ -638,6 +659,11 @@ require('lazy').setup({
       -- basedpyright over pyright: it re-implements Pylance's add-import quick fix as a real code
       -- action (on <leader>ca), gated on reportUndefinedVariable staying enabled (the default).
       vim.lsp.config('basedpyright', {
+        -- The monorepo's dependency graph blows past node's default ~4GB old-space limit, and the
+        -- server dies mid-session with "FATAL ERROR: ... JavaScript heap out of memory" (visible in
+        -- :LspLog), which silently takes gd/gr/K with it. Raise the heap ceiling.
+        -- (raise further if it still OOMs; the box has 48GB)
+        cmd_env = { NODE_OPTIONS = '--max-old-space-size=8192' },
         before_init = function(_, config)
           local venv_python = (config.root_dir or '') .. '/.venv/bin/python'
           if config.root_dir and vim.fn.executable(venv_python) == 1 then
