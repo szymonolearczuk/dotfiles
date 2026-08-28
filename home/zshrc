@@ -82,6 +82,26 @@ gwar() {
   cmd/install
 }
 
+gwal() {
+  local name="$1"
+
+  if [ -z "$name" ]; then
+    echo "Usage: gwar <local-branch-name>"
+    return 1
+  fi
+
+  local safe_name="${name//\//-}"
+  local wt_path="$HOME/code/python_monorepo-$safe_name"
+
+  git fetch origin >/dev/null 2>&1
+
+  gw add -b "$name" "$wt_path" "$name"
+  cd "$wt_path/backend"
+
+  cmd/sync
+  cmd/install
+}
+
 
 alias t='tmux'
 alias ta='tmux a'
