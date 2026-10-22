@@ -106,6 +106,33 @@ gwal() {
 alias t='tmux'
 alias ta='tmux a'
 
+# Create (or jump to) the standard dev tmux session:
+#   dotfiles | main | one window per python_monorepo worktree (agent worktrees skipped)
+# Monorepo windows: top pane in backend/, bottom pane in the root running claude (auto mode).
+tdev() {
+  local session="${1:-dev}" mono=~/code/python_monorepo win wt name
+  if ! tmux has-session -t "=$session" 2>/dev/null; then
+    _tdev_split() {
+      local backend="$2/backend"; [ -d "$backend" ] || backend="$2"
+      tmux send-keys -t "$1" "cd '$backend'" C-m
+      tmux split-window -v -t "$1" -c "$2" "claude --permission-mode auto; exec $SHELL"
+      tmux select-pane -t "$1"
+    }
+    tmux new-session -d -s "$session" -n dotfiles -c ~/code/dotfiles
+    win=$(tmux new-window -P -F '#{window_id}' -t "$session:" -n main -c "$mono")
+    _tdev_split "$win" "$mono"
+    git -C "$mono" worktree list --porcelain | sed -n 's/^worktree //p' | while read -r wt; do
+      [[ "$wt" == "$mono" || "$wt" == */.claude/worktrees/* ]] && continue
+      name="${wt:t}"; name="${name#python_monorepo-}"
+      win=$(tmux new-window -P -F '#{window_id}' -t "$session:" -n "$name" -c "$wt")
+      _tdev_split "$win" "$wt"
+    done
+    unfunction _tdev_split
+    tmux select-window -t "$session:dotfiles"
+  fi
+  if [ -n "$TMUX" ]; then tmux switch-client -t "$session"; else tmux attach-session -t "$session"; fi
+}
+
 alias postgres-start='brew services start postgresql@17'
 alias postgres-stop='brew services stop postgresql@17'
 
