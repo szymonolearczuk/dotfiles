@@ -5,6 +5,13 @@ sso_role_name = AdministratorAccess
 region = eu-west-2
 output = json
 
+[profile AdministratorAccessTestIe]
+sso_session = Session
+sso_account_id = 150390106873
+sso_role_name = AdministratorAccess
+region = eu-west-2
+output = json
+
 [profile BackendEngineerProd]
 sso_session = Session
 sso_account_id = 105751877966
