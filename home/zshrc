@@ -146,7 +146,8 @@ alias clickhouse-stop='docker ps --filter "ancestor=$CLICKHOUSE_IMAGE" -q | xarg
 
 alias chatbot-router='AWS_PROFILE=AdministratorAccessTest AWS_REGION=eu-west-2 /Users/szymonolearczuk/code/python_monorepo/.venv/bin/python /Users/szymonolearczuk/code/python_monorepo/lib/core/core/server/routers/chatbot/router.py'
 
-export PATH="$HOME/.local/bin:/opt/homebrew/opt/postgresql@18/bin:/opt/homebrew/bin:$PATH"
+export PATH="$HOME/.local/bin:/opt/homebrew/opt/postgresql@18/bin:/opt/homebrew/bin:$HOME/code/python_monorepo//experimental/hunter.cassidy/plugs/bin:$PATH"
+
 
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
