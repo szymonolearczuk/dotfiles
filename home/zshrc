@@ -222,6 +222,10 @@ plugins=(vi-mode)
 
 source $ZSH/oh-my-zsh.sh
 
+# fzf key bindings (ctrl-r history search, ctrl-t files, alt-c cd). Must come after
+# oh-my-zsh so it overrides the vi-mode plugin's ctrl-r binding.
+source <(fzf --zsh)
+
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
