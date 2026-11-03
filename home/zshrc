@@ -31,6 +31,26 @@ alias gstp='gst pop'
 alias gw='g worktree'
 alias gwr='gw remove'
 
+# gbdg <pattern>: force-delete every local branch matching the grep pattern (asks first)
+gbdg() {
+  if [ -z "$1" ]; then
+    echo "Usage: gbdg <pattern>"
+    return 1
+  fi
+
+  local branches
+  branches=("${(@f)$(git branch --format='%(refname:short)' | grep -e "$1")}")
+  if [ -z "${branches[1]}" ]; then
+    echo "No branches match '$1'"
+    return 1
+  fi
+
+  printf '%s\n' "${branches[@]}"
+  read -q "REPLY?Delete ${#branches[@]} branch(es)? [y/N] " || { echo; return 1; }
+  echo
+  git branch -D "${branches[@]}"
+}
+
 gps() {
   git push origin --set-upstream "$(git branch --show-current)"
 }
