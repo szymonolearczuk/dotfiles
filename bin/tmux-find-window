@@ -1,0 +1,18 @@
+#!/bin/zsh
+# Run inside a tmux popup (see the `bind F` line in home/tmux.conf): fuzzy-search the
+# windows of every session by name, and jump to the one you pick.
+#
+# The search only matches the window name; the session and path are shown for context.
+
+target=$(
+  tmux list-windows -a -F '#{session_name}:#{window_index}'$'\t''#{window_name}'$'\t''#{session_name}'$'\t''#{pane_current_path}' |
+    sed "s|$HOME|~|" |
+    fzf --delimiter=$'\t' --with-nth=2.. --nth=1 --tabstop=50 --reverse \
+        --prompt='window> ' --no-multi --color=dark |
+    cut -f1
+)
+
+[[ -z "$target" ]] && exit 0
+
+# switch-client also changes session when the window lives in another one.
+tmux switch-client -t "$target"
