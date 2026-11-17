@@ -1,0 +1,29 @@
+#!/bin/zsh
+# Run inside a tmux popup (see the `bind W` line in home/tmux.conf): asks for a
+# worktree name, then opens a new window that
+#   1. starts in ~/code/python_monorepo
+#   2. runs `gwa <name>` (zshrc function: creates the worktree, cds into its backend/, syncs)
+#
+# Usage: tmux-new-worktree   (no arguments; the session is whichever one the popup was opened from)
+
+# tmux does not expand #{...} in a popup command, so ask tmux itself rather than passing the name in.
+session=$(tmux display-message -p '#{session_name}')
+mono=~/code/python_monorepo
+log=/tmp/tmux-new-worktree.log
+
+log() { print -r -- "$(date +%T) $*" >>"$log"; }
+# The popup closes the moment the script exits, so an error would vanish unseen: log it and wait for a key.
+fail() { log "FAILED: $*"; print -P "%F{red}$*%f\n(logged to $log) press any key"; read -rsk1; exit 1 }
+
+[[ -z "$session" ]] && fail "could not determine the tmux session"
+log "started session=$session"
+read -r "name?Worktree name: " || { log "read failed/EOF"; exit 0 }
+log "name='$name'"
+[[ -z "$name" ]] && { log "empty name, nothing to do"; exit 0 }
+
+win=$(tmux new-window -P -F '#{window_id}' -t "${session}:" -n "${name//\//-}" -c "$mono" 2>&1) || fail "new-window failed: $win"
+log "created window $win"
+
+# gwa ends with a cd into the worktree's backend/, so the window is left there.
+tmux send-keys -t "$win" "gwa ${(q)name}" C-m || fail "send-keys failed"
+log "sent gwa to $win"
